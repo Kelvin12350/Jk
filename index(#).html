@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-User Cloud File Manager</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Inter font and colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary': '#4f46e5',
+                        'secondary': '#1f2937',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better aesthetics */
+        .custom-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: #4f46e5;
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        
+        body {
+            background-color: #0d121c;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8 min-h-screen">
+
+    <div class="max-w-6xl mx-auto bg-gray-800 shadow-2xl rounded-xl">
+        
+        <!-- Status Bar (Usage & Limit) -->
+        <div id="status-bar" class="p-4 bg-gray-900 text-white rounded-t-xl">
+            <!-- Content will be updated by JavaScript -->
+            <div class="flex justify-center items-center h-8">
+                <div class="text-lg">Loading storage status...</div>
+            </div>
+        </div>
+        
+        <!-- Authentication Container (Auto-Login Status) -->
+        <div id="auth-container" class="p-8 text-center text-white">
+            <h2 class="text-3xl font-bold mb-6">Welcome to Cloud Manager</h2>
+            
+            <div class="max-w-sm mx-auto bg-gray-700 p-6 rounded-xl shadow-xl space-y-4">
+                 <h3 class="text-xl font-semibold mb-4">Connecting to Cloud Storage</h3>
+
+                 <!-- REMOVED: Manual Login Inputs -->
+                 <!-- REMOVED: Login/Sign Up buttons -->
+                 
+                 <p id="auth-message" class="text-center text-lg text-yellow-400 font-semibold">
+                    <span class="animate-pulse">Attempting secure sign-in...</span>
+                 </p>
+                 <p class="text-center text-sm text-gray-400 mt-2">
+                    Your session is automatically secured. Files persist across page refreshes.
+                 </p>
+            </div>
+        </div>
+        
+        <!-- File Manager Wrapper (Shown when logged in) -->
+        <div id="file-manager-wrapper" class="hidden">
+            <div class="p-4 sm:p-6">
+                
+                <!-- Header with Logout -->
+                <div class="flex justify-between items-center mb-6 border-b border-gray-700 pb-4">
+                    <p class="text-sm text-gray-400">
+                        Logged in as: <span id="user-email-display" class="font-semibold text-white"></span>
+                    </p>
+                    <button onclick="window.signOutUser()" class="px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition duration-150">Sign Out</button>
+                </div>
+
+                <!-- Actions and Breadcrumbs -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
+                    
+                    <div id="breadcrumbs" class="flex flex-wrap items-center text-sm font-medium text-gray-400">
+                        <!-- Breadcrumbs will be here -->
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button onclick="window.showCreateModal('folder')" class="flex items-center px-4 py-2 bg-primary hover:bg-indigo-600 text-white rounded-lg shadow-md transition duration-150">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                            Folder
+                        </button>
+                        <button onclick="window.showCreateModal('file')" class="flex items-center px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg shadow-md transition duration-150">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            File
+                        </button>
+                        <button onclick="window.showCreateModal('video')" class="flex items-center px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-lg shadow-md transition duration-150">
+                            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            Video
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File List -->
+                <div id="file-list" class="bg-gray-700 rounded-lg p-2 min-h-64 custom-scroll">
+                    <p id="loading-message" class="text-gray-400 text-center py-10">Loading files...</p>
+                    <!-- File items will be populated here -->
+                </div>
+
+                <!-- User ID Display (MANDATORY for multi-user/public data visibility) -->
+                <div class="mt-4 p-3 bg-gray-900 rounded-lg text-sm text-gray-400">
+                    Your User ID (for private storage context): <span id="user-id-display" class="font-mono text-white break-all"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. Create/Edit Modal -->
+    <div id="create-edit-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <h3 id="modal-title" class="text-2xl font-bold mb-1 text-white">Create New Item</h3>
+            <p id="parent-folder-info" class="text-sm text-gray-400 mb-4"></p> 
+            <div class="space-y-4">
+                <input type="text" id="item-name" placeholder="Enter name" class="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-primary focus:border-primary border border-gray-600">
+                
+                <div id="file-upload-section" class="space-y-3">
+                    <div class="flex items-center space-x-2" id="content-mode-toggle">
+                        <label class="text-white text-sm">Content Method:</label>
+                        <button type="button" id="toggle-manual-btn" onclick="window.toggleContentMode('manual')" class="px-3 py-1 text-xs rounded-full bg-primary text-white transition-colors">Manual Content</button>
+                        <button type="button" id="toggle-upload-btn" onclick="window.toggleContentMode('upload')" class="px-3 py-1 text-xs rounded-full bg-gray-600 text-white transition-colors">Local Upload</button>
+                    </div>
+
+                    <input type="file" id="item-file-upload" onchange="window.handleFileUploadSelection()" class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-700 file:text-primary hover:file:bg-gray-600 hidden">
+                    <p id="file-size-preview" class="text-sm text-gray-400 hidden"></p>
+
+                    <textarea id="item-content" rows="6" placeholder="File content (only for 'file' type)" class="w-full p-3 bg-gray-700 text-white rounded-lg focus:ring-primary focus:border-primary border border-gray-600 resize-none hidden"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button onclick="window.hideCreateModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition duration-150">Cancel</button>
+                    <button id="save-button" onclick="window.saveItem()" class="px-4 py-2 bg-primary hover:bg-indigo-600 text-white rounded-lg transition duration-150">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. View/Video Modal -->
+    <div id="view-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-900 rounded-xl p-6 w-full max-w-3xl shadow-2xl">
+            <h3 id="view-modal-title" class="text-2xl font-bold mb-4 text-white">View Content</h3>
+            <div id="view-modal-content" class="text-white text-base bg-gray-800 p-4 rounded-lg overflow-y-auto max-h-[70vh]">
+                <!-- Content/Video Player goes here -->
+            </div>
+            <div class="mt-4 flex justify-end space-x-3">
+                <button id="edit-file-btn" onclick="window.openEditModalFromView()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition duration-150 hidden">Edit File</button>
+                <button id="download-btn" onclick="window.simulateDownload()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition duration-150">Download (Simulated)</button>
+                <button onclick="window.hideViewModal()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition duration-150">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 3. Info Alert Modal (Non-Blocking) - Replaces simple alert() for info/error -->
+    <div id="info-alert-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 id="info-modal-title" class="text-xl font-bold mb-3 text-white">Alert</h3>
+            <p id="info-modal-message" class="text-gray-300 mb-6"></p>
+            <div class="flex justify-end">
+                <button onclick="window.hideInfoAlertModal()" class="px-4 py-2 bg-primary hover:bg-indigo-600 text-white rounded-lg transition duration-150">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. Confirmation Modal (Blocking, for Delete) - Replaces confirm() for destructive actions -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gray-800 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+            <h3 class="text-xl font-bold mb-3 text-white">Confirm Action</h3>
+            <p id="confirm-modal-message" class="text-gray-300 mb-6"></p>
+            <div class="flex justify-end space-x-3">
+                <button id="confirm-cancel-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg transition duration-150">Cancel</button>
+                <button id="confirm-action-btn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition duration-150">Confirm Delete</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // --- FIREBASE IMPORTS ---
+        import { initializeApp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"; 
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            signOut as firebaseSignOut,
+            signInAnonymously, 
+            signInWithCustomToken,
+            // REMOVED: createUserWithEmailAndPassword, signInWithEmailAndPassword imports as they are blocked
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            query, 
+            onSnapshot, 
+            doc, 
+            addDoc, 
+            setDoc, 
+            deleteDoc,
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // FIX: Add a dummy configuration to prevent crashing if the global environment variables are missing.
+        const DUMMY_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyD8-JOU1GSyVrjPf43UBBakwOgmaDLjCxA",
+            authDomain: "mega-910bd.firebaseapp.com",
+            projectId: "mega-910bd.firebaseapp.com",
+            storageBucket: "mega-910bd.firebasestorage.app",
+            messagingSenderId: "1:1077865554196:web:235e3c9bf3f1f57953e201",
+            appId: "dummy-app-id"
+        };
+
+        // IMPORTANT: Global Firebase variables provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : DUMMY_FIREBASE_CONFIG;
+        // NEW: Check for the custom token provided by the environment
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        // Constants for Storage Limits
+        const GB = 1000000000;
+        const TOTAL_LIMIT_BYTES = 539 * GB;
+        const EXPIRATION_THRESHOLD_BYTES = 526 * GB;
+        const DEFAULT_FILE_SIZE_BYTES = 1024 * 1024; // 1MB for new files
+
+        // Global State
+        let db;
+        let auth;
+        let userId = null;
+        let files = []; // All files and folders from the database
+        let totalUsageBytes = 0;
+        let currentParentId = null; // The ID of the folder currently being viewed (null for root)
+        let currentBreadcrumbs = [{ id: null, name: 'Root' }];
+        let currentEditItem = null; // Used when editing an existing item
+        
+        // FIX: Global variable to hold the listener cleanup function
+        let fileListenerUnsubscribe = null; 
+
+        // Set Firebase Debug Logging
+        setLogLevel('Debug');
+
+
+        // --- UTILITY FUNCTIONS ---
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // UPDATED: Now uses a custom modal (#info-alert-modal) instead of window.confirm()
+        function alertUser(title, message) {
+            console.error(`UI Alert: ${title} - ${message}`);
+            const modal = document.getElementById('info-alert-modal');
+            document.getElementById('info-modal-title').textContent = title;
+            document.getElementById('info-modal-message').textContent = message;
+            modal.classList.remove('hidden');
+        }
+
+        window.hideInfoAlertModal = function() {
+            document.getElementById('info-alert-modal').classList.add('hidden');
+        }
+        
+        // NEW: Handles blocking confirmation via promise (used for deletion)
+        async function showConfirmationModal(title, message) {
+            const modal = document.getElementById('confirmation-modal');
+            const messageEl = document.getElementById('confirm-modal-message');
+            const confirmBtn = document.getElementById('confirm-action-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            messageEl.textContent = message;
+            // Set the appropriate button text for confirmation
+            confirmBtn.textContent = title.includes('Delete') ? 'Confirm Delete' : 'Confirm';
+            modal.classList.remove('hidden');
+
+            return new Promise(resolve => {
+                const handleConfirm = () => {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    resolve(true);
+                };
+                const handleCancel = () => {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    resolve(false);
+                };
+
+                // Clear previous listeners (important for re-using modal)
+                confirmBtn.onclick = handleConfirm;
+                cancelBtn.onclick = handleCancel;
+                cancelBtn.onclick = handleCancel;
+            });
+        }
+
+
+        function updateStatusBar() {
+            const usageGB = totalUsageBytes / GB;
+            const remainingGB = (TOTAL_LIMIT_BYTES - totalUsageBytes) / GB;
+            const isOverTotalLimit = totalUsageBytes >= TOTAL_LIMIT_BYTES;
+            const isExpired = totalUsageBytes >= EXPIRATION_THRESHOLD_BYTES;
+            const totalFiles = files.length;
+
+            let message = '';
+            let statusColor = 'text-green-400';
+            let usageText = '';
+
+            if (userId === null) {
+                message = 'Please wait while we connect to storage.';
+                statusColor = 'text-gray-400';
+            } else if (isOverTotalLimit) {
+                message = 'Storage FULL. Please delete files to continue.';
+                statusColor = 'text-red-500';
+            } else if (isExpired) {
+                // REQUIRED: Free plan expiration message at 526GB
+                message = 'Your free user plan has expired. ';
+                statusColor = 'text-yellow-400';
+            } else {
+                message = 'Remaining Space: ' + remainingGB.toFixed(2) + ' GB.';
+                statusColor = 'text-green-400';
+            }
+            
+            if (userId !== null) {
+                usageText = `Usage: ${usageGB.toFixed(2)} GB / 539 GB`;
+            }
+
+            const percentageUsed = userId === null ? 0 : Math.min(100, (totalUsageBytes / TOTAL_LIMIT_BYTES) * 100);
+
+            const html = `
+                <div class="flex flex-col sm:flex-row justify-between items-center">
+                    <h2 class="text-xl font-bold">Cloud Manager (${userId ? totalFiles + ' Items' : 'Connecting...'})</h2>
+                    <p class="font-medium ${statusColor} text-right">
+                        ${message} 
+                        <span class="text-white">${usageText}</span>
+                    </p>
+                </div>
+                <div class="mt-2 w-full bg-gray-700 rounded-full h-2.5">
+                    <div class="bg-blue-500 h-2.5 rounded-full transition-all duration-500" style="width: ${percentageUsed}%"></div>
+                </div>
+            `;
+            document.getElementById('status-bar').innerHTML = html;
+        }
+
+        // --- AUTHENTICATION FUNCTIONS (SIMPLIFIED) ---
+        
+        // REMOVED: window.signIn and window.signUp functions
+        // These caused the 'auth/operation-not-allowed' error because the feature is blocked by the environment configuration.
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.signOutUser = async function() {
+            try {
+                await firebaseSignOut(auth);
+                // Auth state listener handles UI change
+            } catch (error) {
+                console.error("Sign Out Error:", error);
+                alertUser("Sign Out Error", "Could not sign out. See console.");
+            }
+        }
+
+        // --- FIREBASE INITIALIZATION AND AUTH ---
+
+        async function initFirebase() {
+            if (Object.keys(firebaseConfig).length === 0) { 
+                document.getElementById('auth-message').textContent = "Error: Firebase configuration is not available.";
+                return;
+            }
+
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // 1. Authenticate using the provided token or anonymously (Ensures Persistence)
+            try {
+                // Check if already signed in persistently (Firebase default behavior)
+                if (!auth.currentUser) {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with Custom Token (for persistence).");
+                    } else {
+                        // Fallback to anonymous, still persists using local storage for the anonymous UID
+                        await signInAnonymously(auth);
+                        console.log("Signed in Anonymously (Fallback for persistence).");
+                    }
+                }
+            } catch(e) {
+                 console.error("Auto sign-in failed:", e);
+                 alertUser("Critical Error", "Could not automatically sign in. Check console for Firebase initialization issues.");
+                 return;
+            }
+            
+            // 2. Auth State Listener (Handles session changes, including successful auto-sign-in/refresh)
+            onAuthStateChanged(auth, (user) => {
+                const authMessageEl = document.getElementById('auth-message');
+
+                if (user) {
+                    userId = user.uid;
+                    
+                    // Display UID and Email (will be null for custom/anonymous tokens)
+                    document.getElementById('user-id-display').textContent = userId;
+                    document.getElementById('user-email-display').textContent = `Session ID: ${user.uid.substring(0, 8)}...`;
+                    
+                    // Update status message
+                    authMessageEl.textContent = 'Successfully connected and signed in.';
+                    
+                    // Hide auth status and show file manager
+                    document.getElementById('auth-container').classList.add('hidden');
+                    document.getElementById('file-manager-wrapper').classList.remove('hidden');
+                    
+                    // Start listening to data once authenticated
+                    if (db && userId) {
+                        startFirestoreListener();
+                    }
+                } else {
+                    // Reset UI to show login form
+                    userId = null;
+                    files = []; 
+                    currentParentId = null;
+                    currentBreadcrumbs = [{ id: null, name: 'Root' }];
+                    
+                    // FIX: Stop listening to data when signed out
+                    if (fileListenerUnsubscribe) {
+                        console.log("Stopping Firestore listener due to sign out.");
+                        fileListenerUnsubscribe();
+                        fileListenerUnsubscribe = null;
+                    }
+
+                    document.getElementById('auth-container').classList.remove('hidden');
+                    document.getElementById('file-manager-wrapper').classList.add('hidden');
+                    authMessageEl.textContent = 'Signed out. Please refresh the page to sign back in automatically.';
+                    
+                    updateStatusBar(); 
+                    renderFileList(); 
+                    renderBreadcrumbs();
+                }
+            });
+        }
+
+        // --- FIREBASE DATA LISTENERS ---
+
+        function getCollectionPath() {
+            // Private data path: /artifacts/{appId}/users/{userId}/file_manager
+            return `artifacts/${appId}/users/${userId}/file_manager`;
+        }
+
+        function startFirestoreListener() {
+            if (!userId || !db) return; // Guard against unauthenticated call
+            
+            // FIX: Unsubscribe existing listener if it exists before creating a new one
+            if (fileListenerUnsubscribe) {
+                fileListenerUnsubscribe();
+            }
+            
+            const path = getCollectionPath();
+            console.log("Setting up Firestore listener for path:", path, "User:", userId); 
+            
+            const filesCollectionRef = collection(db, path);
+            const q = query(filesCollectionRef);
+
+            // FIX: Store the unsubscribe function to the global variable
+            fileListenerUnsubscribe = onSnapshot(q, (snapshot) => {
+                files = [];
+                totalUsageBytes = 0;
+                
+                snapshot.forEach((doc) => {
+                    const data = { id: doc.id, ...doc.data() };
+                    files.push(data);
+                    // Ensure size is a number before adding, default to 0
+                    totalUsageBytes += (typeof data.size === 'number' ? data.size : 0);
+                });
+
+                updateStatusBar();
+                renderFileList();
+            }, (error) => {
+                console.error("Error listening to files:", error);
+                // The permission error happens here if the request is unauthenticated.
+                document.getElementById('file-list').innerHTML = `<p class="text-red-400 text-center py-10">Error loading files: Missing permissions or connection error: ${error.message}</p>`;
+            });
+        }
+
+        // --- CRUD OPERATIONS (UNCHANGED) ---
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.saveItem = async function() {
+            const nameInput = document.getElementById('item-name');
+            const contentTextarea = document.getElementById('item-content');
+            const fileInput = document.getElementById('item-file-upload');
+            const saveButton = document.getElementById('save-button');
+            
+            const type = saveButton.dataset.type;
+            const isEditing = currentEditItem !== null;
+
+            let name = nameInput.value.trim();
+            let content = contentTextarea.value;
+            let itemSize = 0;
+            const uploadedFile = fileInput.files[0];
+
+            // 1. Determine size, name, and content based on input mode
+            if ((type === 'file' || type === 'video') && uploadedFile && !isEditing) {
+                // Upload mode selected and file chosen for *new* item
+                name = uploadedFile.name;
+                itemSize = uploadedFile.size;
+                content = `[SIMULATED UPLOAD: File uploaded from local storage. Type: ${uploadedFile.type}, Size: ${formatBytes(itemSize)}]`;
+            } else if (type === 'folder') {
+                itemSize = 0;
+                content = null;
+            } else {
+                // Manual content mode or folder mode with no file, or editing existing
+                if (isEditing) {
+                    itemSize = currentEditItem.size;
+                } else {
+                    itemSize = content.length > 0 ? content.length : DEFAULT_FILE_SIZE_BYTES;
+                }
+            }
+            
+            // When editing a file manually, update size based on new content length
+            if (isEditing && (type === 'file' || type === 'video') && !fileInput.files[0] && contentTextarea.classList.contains('hidden') === false) {
+                 itemSize = content.length > 0 ? content.length : DEFAULT_FILE_SIZE_BYTES;
+            }
+
+            if (!name) {
+                console.error("Name is required.");
+                alertUser("Validation Error", "Please enter a name for the item.");
+                return;
+            }
+
+            // Calculate size difference for limit check
+            let sizeDifference = itemSize;
+            if (isEditing) {
+                sizeDifference = itemSize - (currentEditItem.size || 0);
+            }
+
+            // 2. Check storage limit 
+            if (totalUsageBytes + sizeDifference > TOTAL_LIMIT_BYTES) {
+                alertUser("Storage Limit Reached", "You cannot save this item because it would exceed your 539 GB storage limit.");
+                window.hideCreateModal();
+                return;
+            }
+            
+            const itemData = {
+                name: name,
+                type: type,
+                parentId: currentParentId, // CRITICAL: This uses the global state
+                size: itemSize,
+                content: (type === 'file' || type === 'video') ? content : null,
+                // Only set createdAt on creation
+                ...(isEditing ? {} : { createdAt: new Date().toISOString() })
+            };
+            
+            // For editing, merge with existing data, but use itemData for the main updates
+            const docData = isEditing ? {...currentEditItem, ...itemData} : itemData;
+
+            try {
+                if (isEditing) {
+                    const docRef = doc(db, getCollectionPath(), currentEditItem.id);
+                    await setDoc(docRef, docData);
+                } else {
+                    await addDoc(collection(db, getCollectionPath()), itemData);
+                }
+                window.hideCreateModal();
+            } catch (error) {
+                console.error("Error saving document:", error);
+                alertUser("Save Error", "Could not save item. See console for details.");
+            }
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.deleteItem = async function(itemId) {
+            
+            const itemToDelete = files.find(f => f.id === itemId);
+            if (!itemToDelete) return;
+
+            if (itemToDelete.type === 'folder') {
+                // Check for direct children
+                const childrenCount = files.filter(f => f.parentId === itemId).length;
+                if (childrenCount > 0) {
+                    alertUser("Cannot Delete Folder", `Folder is not empty. Please delete ${childrenCount} item(s) inside first.`);
+                    return;
+                }
+            }
+
+            // FIX: Replaced confirm() with custom showConfirmationModal
+            const confirmation = await showConfirmationModal("Confirm Deletion", `Are you sure you want to delete "${itemToDelete.name}"? This action cannot be undone.`);
+            
+            if (!confirmation) return;
+
+            try {
+                const docRef = doc(db, getCollectionPath(), itemId);
+                await deleteDoc(docRef);
+                console.log("Document successfully deleted with ID:", itemId);
+            } catch (error) {
+                console.error("Error deleting document:", error);
+                alertUser("Delete Error", "Could not delete item. See console for details.");
+            }
+        }
+
+        // --- UI RENDERING (UNCHANGED) ---
+
+        function renderFileList() {
+            const listContainer = document.getElementById('file-list');
+            
+            if (userId === null) {
+                 listContainer.innerHTML = `<p class="text-gray-400 text-center py-10">Please wait while we connect to storage.</p>`;
+                 return;
+            }
+
+            const currentFolderContents = files.filter(file => file.parentId === currentParentId);
+
+            if (currentFolderContents.length === 0) {
+                const currentFolderName = currentBreadcrumbs[currentBreadcrumbs.length - 1].name;
+                listContainer.innerHTML = `
+                    <p class="text-gray-400 text-center py-10">
+                        The folder "<span class="text-white font-semibold">${currentFolderName}</span>" is empty. Create a new file or folder above.
+                    </p>
+                `;
+                return;
+            }
+
+            currentFolderContents.sort((a, b) => {
+                if (a.type === 'folder' && b.type !== 'folder') return -1;
+                if (a.type !== 'folder' && b.type === 'folder') return 1;
+                return a.name.localeCompare(b.name);
+            });
+            
+            listContainer.innerHTML = ''; // Clear content
+            currentFolderContents.forEach(item => {
+                const isFolder = item.type === 'folder';
+                const icon = getIcon(item.type);
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "flex items-center justify-between p-3 my-1 bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition duration-150 group";
+                
+                let nameHtml = '';
+                if (isFolder) {
+                    // Folders are clickable to navigate
+                    nameHtml = `
+                        <div class="flex items-center flex-grow cursor-pointer" onclick="window.navigateTo('${item.id}', '${item.name}')">
+                            ${icon}
+                            <span class="ml-3 font-medium truncate">${item.name}</span>
+                        </div>
+                    `;
+                } else {
+                    // Files/Videos are NOT clickable on the name/row itself
+                    nameHtml = `
+                        <div class="flex items-center flex-grow">
+                            ${icon}
+                            <span class="ml-3 font-medium truncate">${item.name}</span>
+                        </div>
+                    `;
+                }
+
+                itemDiv.innerHTML = `
+                    ${nameHtml}
+                    
+                    <div class="flex items-center space-x-3 text-sm text-gray-400 flex-shrink-0">
+                        <span class="hidden sm:inline">${isFolder ? 'Folder' : formatBytes(item.size)}</span>
+                        
+                        <!-- VIEW/EDIT Button (Only for Files/Videos) -->
+                        ${!isFolder ? `<button onclick="window.showViewModal('${item.id}')" title="View/Edit Content" class="px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white text-xs rounded-lg shadow-md transition duration-150">
+                            View/Edit
+                        </button>` : ''}
+                        
+                        <!-- Delete Button -->
+                        <button onclick="window.deleteItem('${item.id}')" title="Delete Item" class="text-red-500 hover:text-red-400 p-1 rounded-full opacity-0 group-hover:opacity-100 transition duration-150">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(itemDiv);
+            });
+            renderBreadcrumbs();
+        }
+
+        function getIcon(type) {
+            switch (type) {
+                case 'folder':
+                    return `
+                        <svg class="w-6 h-6 text-primary" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v2H2V6z"></path><path d="M2 10a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2v-8z"></path></svg>
+                    `;
+                case 'file':
+                    return `
+                        <svg class="w-6 h-6 text-emerald-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0113 3.414l2.414 2.414A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path></svg>
+                    `;
+                case 'video':
+                    return `
+                        <svg class="w-6 h-6 text-rose-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    `;
+                default:
+                    return `
+                        <svg class="w-6 h-6 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v4h-4.586l-1.414-1.414A1 1 0 0010 8.586L8.586 7.172A2 2 0 007.172 7H4V5zm10 10V7h2v8a2 2 0 01-2 2H6a2 2 0 01-2-2v-4h14v.75c0 .066.036.126.095.163l1.933 1.196a.25.25 0 01.039.43L18 15.75V17a2 2 0 002-2h-6z" clip-rule="evenodd"></path></svg>
+                    `;
+            }
+        }
+
+        // --- NAVIGATION & BREADCRUMBS (UNCHANGED) ---
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.navigateTo = function(folderId, folderName) {
+            currentParentId = folderId;
+            
+            const existingIndex = currentBreadcrumbs.findIndex(b => b.id === folderId);
+            
+            if (existingIndex > -1) {
+                currentBreadcrumbs = currentBreadcrumbs.slice(0, existingIndex + 1);
+            } else {
+                currentBreadcrumbs.push({ id: folderId, name: folderName });
+            }
+            renderFileList();
+        }
+
+        function renderBreadcrumbs() {
+            const breadcrumbContainer = document.getElementById('breadcrumbs');
+            breadcrumbContainer.innerHTML = '';
+            let path = '';
+
+            currentBreadcrumbs.forEach((crumb, index) => {
+                const isLast = index === currentBreadcrumbs.length - 1;
+                path += (path === '' ? '' : '/') + crumb.name;
+                
+                const span = document.createElement('span');
+                span.className = isLast ? 'text-white' : 'text-gray-400 hover:text-primary transition duration-150';
+                span.textContent = crumb.name;
+
+                if (!isLast) {
+                    span.onclick = () => window.navigateTo(crumb.id, crumb.name);
+                    span.className += ' cursor-pointer';
+                }
+
+                breadcrumbContainer.appendChild(span);
+
+                if (!isLast) {
+                    const separator = document.createElement('span');
+                    separator.className = 'mx-2';
+                    separator.innerHTML = '&#8250;'; // Right angle quote
+                    breadcrumbContainer.appendChild(separator);
+                }
+            });
+            // Store the current path for the modal
+            document.getElementById('breadcrumbs').dataset.currentPath = path;
+        }
+
+        // --- MODAL HANDLERS (UNCHANGED LOGIC) ---
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.toggleContentMode = function(mode) {
+            const contentTextarea = document.getElementById('item-content');
+            const fileInput = document.getElementById('item-file-upload');
+            const manualBtn = document.getElementById('toggle-manual-btn');
+            const uploadBtn = document.getElementById('toggle-upload-btn');
+            const preview = document.getElementById('file-size-preview');
+
+            if (mode === 'manual') {
+                contentTextarea.classList.remove('hidden');
+                fileInput.classList.add('hidden');
+                preview.classList.add('hidden');
+                manualBtn.classList.add('bg-primary');
+                manualBtn.classList.remove('bg-gray-600');
+                uploadBtn.classList.remove('bg-primary');
+                uploadBtn.classList.add('bg-gray-600');
+                fileInput.value = ''; // Clear file selection when switching
+                document.getElementById('item-name').placeholder = "Enter item name";
+            } else if (mode === 'upload') {
+                contentTextarea.classList.add('hidden');
+                fileInput.classList.remove('hidden');
+                manualBtn.classList.remove('bg-primary');
+                manualBtn.classList.add('bg-gray-600');
+                uploadBtn.classList.add('bg-primary');
+                uploadBtn.classList.remove('bg-gray-600');
+                document.getElementById('item-name').placeholder = "Name will be set by the uploaded file";
+                window.handleFileUploadSelection(); // Update preview immediately
+            }
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.handleFileUploadSelection = function() {
+            const fileInput = document.getElementById('item-file-upload');
+            const nameInput = document.getElementById('item-name');
+            const preview = document.getElementById('file-size-preview');
+            const file = fileInput.files[0];
+
+            if (file) {
+                nameInput.value = file.name;
+                preview.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+                preview.classList.remove('hidden');
+            } else {
+                nameInput.value = '';
+                preview.classList.add('hidden');
+            }
+        }
+
+
+        // Create/Edit Modal
+        window.showCreateModal = function(mode, itemId = null) {
+            const modal = document.getElementById('create-edit-modal');
+            const title = document.getElementById('modal-title');
+            const folderInfo = document.getElementById('parent-folder-info');
+            const nameInput = document.getElementById('item-name');
+            const contentTextarea = document.getElementById('item-content');
+            const fileInput = document.getElementById('item-file-upload');
+            const saveButton = document.getElementById('save-button');
+            const uploadSection = document.getElementById('file-upload-section');
+            const toggleBtns = document.getElementById('content-mode-toggle');
+
+            currentEditItem = null;
+            nameInput.value = '';
+            contentTextarea.value = '';
+            fileInput.value = '';
+            document.getElementById('file-size-preview').classList.add('hidden');
+
+            // Set folder context (CRITICAL for user confirmation)
+            const currentFolderName = currentBreadcrumbs[currentBreadcrumbs.length - 1].name;
+            folderInfo.textContent = `Creating in folder: ${currentFolderName}`;
+
+            if (mode === 'edit' && itemId) {
+                currentEditItem = files.find(f => f.id === itemId);
+                if (!currentEditItem || currentEditItem.type === 'folder') return;
+                
+                title.textContent = `Edit ${currentEditItem.type.charAt(0).toUpperCase() + currentEditItem.type.slice(1)}: ${currentEditItem.name}`;
+                nameInput.value = currentEditItem.name;
+                saveButton.dataset.type = currentEditItem.type;
+                
+                contentTextarea.value = currentEditItem.content || '';
+                uploadSection.classList.remove('hidden');
+                toggleBtns.classList.add('hidden');
+                fileInput.classList.add('hidden');
+                contentTextarea.classList.remove('hidden'); // Show content for editing
+
+            } else if (mode === 'folder') {
+                title.textContent = "Create New Folder";
+                uploadSection.classList.add('hidden');
+                saveButton.dataset.type = 'folder';
+                nameInput.placeholder = "Enter folder name";
+
+            } else if (mode === 'file' || mode === 'video') {
+                title.textContent = `Create New ${mode.charAt(0).toUpperCase() + mode.slice(1)}`;
+                saveButton.dataset.type = mode;
+                uploadSection.classList.remove('hidden');
+                toggleBtns.classList.remove('hidden');
+
+                window.toggleContentMode('manual');
+                contentTextarea.placeholder = mode === 'file' ? 'Enter file content (e.g. text/code)' : 'Enter video description (simulated)';
+            } else {
+                return;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.hideCreateModal = function() {
+            document.getElementById('create-edit-modal').classList.add('hidden');
+            currentEditItem = null;
+        }
+        
+        // View/Video Modal
+        window.showViewModal = function(itemId) {
+            const item = files.find(f => f.id === itemId);
+            if (!item) return;
+
+            const modal = document.getElementById('view-modal');
+            const title = document.getElementById('view-modal-title');
+            const contentDiv = document.getElementById('view-modal-content');
+            const editBtn = document.getElementById('edit-file-btn');
+            
+            title.textContent = item.name;
+
+            if (item.type === 'video') {
+                contentDiv.innerHTML = `
+                    <div class="aspect-video bg-black flex items-center justify-center rounded-lg mb-4">
+                        <svg class="w-16 h-16 text-rose-500 animate-pulse" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                        <span class="ml-4 text-gray-300">Video Player Simulation: ${item.content || 'No description.'}</span>
+                    </div>
+                `;
+                editBtn.classList.add('hidden');
+            } else if (item.type === 'file') {
+                contentDiv.innerHTML = `<pre class="whitespace-pre-wrap text-sm text-gray-200">${item.content || 'File content is empty.'}</pre>`;
+                editBtn.classList.remove('hidden');
+                editBtn.onclick = () => window.openEditModalFromView(item.id);
+            }
+
+            document.getElementById('download-btn').dataset.itemId = itemId;
+
+            modal.classList.remove('hidden');
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.hideViewModal = function() {
+            document.getElementById('view-modal').classList.add('hidden');
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.openEditModalFromView = function(itemId) {
+            window.hideViewModal();
+            window.showCreateModal('edit', itemId);
+        }
+
+        // Attaching to window to make it accessible from inline HTML onclick
+        window.simulateDownload = function() {
+            const itemId = document.getElementById('download-btn').dataset.itemId;
+            const item = files.find(f => f.id === itemId);
+            if (item) {
+                // NEW: Uses non-blocking custom alert modal
+                alertUser("Download Initiated", `Simulating download of "${item.name}" (Size: ${formatBytes(item.size)}). Content Snippet: ${item.content.substring(0, Math.min(100, item.content.length))}...`);
+            } else {
+                 alertUser("Download Error", "File not found.");
+            }
+        }
+        
+        // --- INITIALIZATION ---
+        
+        window.onload = function() {
+            initFirebase();
+            renderBreadcrumbs(); 
+            updateStatusBar(); 
+        }
+        
+    </script>
+</body>
+</html>
